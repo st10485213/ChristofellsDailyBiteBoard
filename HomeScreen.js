@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { ShoppingCart, Utensils, Trash2, PlusCircle, MinusCircle, LayoutList } from 'lucide-react';
+import { ShoppingCart, Utensils, Trash2, PlusCircle, MinusCircle, LayoutList, Smartphone } from 'lucide-react';
 
 // --- Theme Simulation ---
-// Mapping React Native styles to Tailwind classes
 const ACCENT_RED = 'bg-red-700';
 const ACCENT_TEXT = 'text-red-700';
 const WHITE_TEXT = 'text-white';
@@ -10,11 +9,19 @@ const BASE_BG = 'bg-gray-50';
 
 // --- Simulated Data and Components ---
 
-// Simplified Menu Item Structure
+// Simplified Menu Item Structure with new items and categories
 const initialMenu = [
-    { id: '1', name: 'Signature Pasta', price: 120.00, description: 'Creamy tomato-based pasta with fresh basil.' },
-    { id: '2', name: 'Prawn Cocktail', price: 85.50, description: 'Classic starter with plump prawns and house sauce.' },
-    { id: '3', name: 'Chocolate Fondant', price: 95.00, description: 'Warm, gooey chocolate dessert with vanilla ice cream.' },
+    // Mains
+    { id: '1', name: 'Pesto Pasta', price: 120.00, description: 'Creamy pesto sauce over linguine with pine nuts.', category: 'main' },
+    { id: '2', name: 'Sushi Platter', price: 140.00, description: 'Chef’s selection of 12-piece mixed sushi.', category: 'main' },
+    // Desserts
+    { id: '3', name: 'Chocolate Lava Cake', price: 105.00, description: 'Warm, gooey molten chocolate cake with raspberry drizzle.', category: 'dessert' },
+    { id: '4', name: 'Caramel Cannoli', price: 70.00, description: 'Crispy pastry tubes filled with caramel ricotta cream.', category: 'dessert' },
+    { id: '5', name: 'Vanilla Bean Cheesecake', price: 75.00, description: 'Rich, creamy cheesecake with berry compote.', category: 'dessert' },
+    // Drinks
+    { id: '6', name: 'Classic Cocktail', price: 65.00, description: 'A perfectly balanced Gin & Tonic.', category: 'drink' },
+    { id: '7', name: 'Sparkling Water (L)', price: 30.00, description: 'Large bottle of local sparkling water.', category: 'drink' },
+    { id: '8', name: 'House Blend Coffee', price: 25.00, description: 'Freshly brewed medium roast coffee.', category: 'drink' },
 ];
 
 /**
@@ -23,6 +30,10 @@ const initialMenu = [
 const AddMenuForm = ({ addMenuItem, clearMenu, menu }) => {
     const [newItemName, setNewItemName] = useState('');
     const [newItemPrice, setNewItemPrice] = useState('0.00');
+    // For simplicity in this simulation, all user-added items are 'main'
+    const newItemCategory = 'main'; 
+    const newItemDescription = "User added item.";
+
 
     const handleAdd = () => {
         if (newItemName.trim() && parseFloat(newItemPrice) > 0) {
@@ -30,7 +41,8 @@ const AddMenuForm = ({ addMenuItem, clearMenu, menu }) => {
                 id: crypto.randomUUID(),
                 name: newItemName.trim(),
                 price: parseFloat(newItemPrice),
-                description: "Simulated item added by user.",
+                description: newItemDescription,
+                category: newItemCategory,
             });
             setNewItemName('');
             setNewItemPrice('0.00');
@@ -82,34 +94,102 @@ const AddMenuForm = ({ addMenuItem, clearMenu, menu }) => {
 /**
  * Simulates the MenuList component.
  */
-const MenuList = ({ menu }) => (
-    <div className="w-full max-w-lg mt-8 p-0 z-10">
-        <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-            <LayoutList className={`w-5 h-5 mr-2 ${ACCENT_TEXT}`} />
-            Current Menu Items ({menu.length})
-        </h3>
-        <div className="space-y-3 max-h-60 overflow-y-auto pr-2">
-            {menu.length === 0 ? (
-                <div className="text-center p-6 text-gray-500 border border-dashed rounded-xl">
-                    <Utensils className="w-6 h-6 mx-auto mb-2" />
-                    No items on the menu yet.
-                </div>
-            ) : (
-                menu.map((item) => (
-                    <div key={item.id} className="p-3 bg-white rounded-lg shadow-sm border-l-4 border-red-400 flex justify-between items-center">
-                        <div>
-                            <p className="font-semibold text-gray-800">{item.name}</p>
-                            <p className="text-xs text-gray-500 truncate">{item.description}</p>
-                        </div>
-                        <span className="font-bold text-lg text-red-700">
-                            R{item.price.toFixed(2)}
-                        </span>
+const MenuList = ({ menu }) => {
+    
+    // Function to determine which icon to show for the picture placeholder
+    const getIconForCategory = (category) => {
+        switch (category) {
+            case 'main': return <Utensils className="w-6 h-6 text-gray-400" />;
+            case 'dessert': return <MinusCircle className="w-6 h-6 text-gray-400" />;
+            case 'drink': return <ShoppingCart className="w-6 h-6 text-gray-400" />;
+            default: return <LayoutList className="w-6 h-6 text-gray-400" />;
+        }
+    };
+
+    // Group and order items by category
+    const categories = useMemo(() => {
+        // Define the desired display order
+        const categoryOrder = ['main', 'dessert', 'drink'];
+    
+        // Group items by category
+        const grouped = menu.reduce((acc, item) => {
+            // Fallback category for items that might be missing one 
+            const category = item.category || 'other'; 
+            if (!acc[category]) {
+                acc[category] = [];
+            }
+            acc[category].push(item);
+            return acc;
+        }, {});
+    
+        // Create an ordered array of categories and their items
+        return categoryOrder
+            .filter(cat => grouped[cat] && grouped[cat].length > 0)
+            .map(cat => ({
+                name: cat.charAt(0).toUpperCase() + cat.slice(1) + (cat === 'main' ? 's' : 's'), // Convert 'main' to 'Mains', etc.
+                key: cat,
+                items: grouped[cat],
+            }));
+    }, [menu]);
+
+    const getCategoryHeaderIcon = (categoryKey) => {
+        switch (categoryKey) {
+            case 'main': return <Utensils className={`w-5 h-5 mr-2 ${ACCENT_TEXT}`} />;
+            case 'dessert': return <MinusCircle className={`w-5 h-5 mr-2 ${ACCENT_TEXT}`} />;
+            case 'drink': return <ShoppingCart className={`w-5 h-5 mr-2 ${ACCENT_TEXT}`} />;
+            default: return <LayoutList className={`w-5 h-5 mr-2 ${ACCENT_TEXT}`} />;
+        }
+    }
+
+    return (
+        <div className="w-full max-w-lg mt-8 p-0 z-10">
+            <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <LayoutList className={`w-5 h-5 mr-2 ${ACCENT_TEXT}`} />
+                Current Menu Items ({menu.length})
+            </h3>
+            
+            {/* Scrollable Container for Categories */}
+            <div className="space-y-6 max-h-[400px] overflow-y-auto pr-2">
+                {menu.length === 0 ? (
+                    <div className="text-center p-6 text-gray-500 border border-dashed rounded-xl">
+                        <Utensils className="w-6 h-6 mx-auto mb-2" />
+                        No items on the menu yet.
                     </div>
-                ))
-            )}
+                ) : (
+                    categories.map(category => (
+                        <div key={category.key} className="space-y-3">
+                            {/* Category Header */}
+                            <h4 className="text-lg font-bold text-gray-700 pt-2 border-b-2 border-red-200 flex items-center mb-1">
+                                {getCategoryHeaderIcon(category.key)}
+                                {category.name} ({category.items.length})
+                            </h4>
+                            
+                            {/* Items in Category */}
+                            {category.items.map((item) => (
+                                <div key={item.id} className="p-3 bg-white rounded-lg shadow-sm border-l-4 border-red-400 flex items-center space-x-4">
+                                    
+                                    {/* Simulated Picture Placeholder */}
+                                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                        {getIconForCategory(item.category)}
+                                    </div>
+
+                                    <div className="flex-grow">
+                                        <p className="font-semibold text-gray-800">{item.name}</p>
+                                        <p className="text-xs text-gray-500 truncate">{item.description}</p>
+                                    </div>
+
+                                    <span className="font-bold text-lg text-red-700 flex-shrink-0">
+                                        R{item.price.toFixed(2)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    ))
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
+};
 
 /**
  * Simulates the Checkout Screen navigation.
@@ -181,7 +261,9 @@ const App = () => {
             <div className={`flex-1 flex flex-col items-center w-full max-w-lg relative ${BASE_BG} font-['Inter'] overflow-hidden`}>
                 
                 {/* 🔴 Top Red Semi-Circle (Simulating styles.topCircle) */}
-                <div className={`w-[150vw] h-[250px] ${ACCENT_RED} rounded-b-[50%] absolute top-0 -translate-y-1/2 flex items-end justify-center pb-12 shadow-lg z-0`}>
+                <div className={`w-[150vw] h-[250px] ${ACCENT_RED} rounded-b-[50%] absolute top-0 -translate-y-1/2 flex flex-col items-center justify-end pb-8 shadow-lg z-0`}>
+                    {/* Logo (Smartphone icon) */}
+                    <Smartphone className={`w-12 h-12 mb-2 ${WHITE_TEXT}`} /> 
                     <h1 className={`text-xl font-black ${WHITE_TEXT} text-center w-3/4`}>
                         Christoffel’s Daily Bite Board
                     </h1>
@@ -201,7 +283,6 @@ const App = () => {
                         className={`py-3 px-8 ${ACCENT_RED} ${WHITE_TEXT} font-bold rounded-xl shadow-lg transition hover:bg-red-800 mt-8 mb-20 z-10`}
                         onClick={() => navigation.navigate("Checkout", { menu })}
                     >
-                        {/* FIX: Changed <Text> to <span> for web compatibility */}
                         <span>Go to Checkout ({menu.length} items)</span>
                     </button>
                 )}
